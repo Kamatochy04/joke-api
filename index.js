@@ -34,6 +34,11 @@ class JokeApp {
   static run() {
     const args = argv.slice(2);
 
+    if (args.length === 0) {
+      console.log(CONFIG.messages.usage);
+      exit(1);
+    }
+
     if (args[0] === "--searchTerm" && args[1]) {
       this.searchForJoke(args[1]);
     } else if (args[0] === "--leaderboard") {
@@ -82,7 +87,10 @@ class JokeApp {
       let data = "";
       response.on("data", (chunk) => (data += chunk));
       response.on("end", () => resolve(data));
-      response.on("error", reject);
+      response.on("error", (error) => {
+        console.error("Ошибка:", error.message);
+        reject(error);
+      });
     });
   }
 
@@ -114,7 +122,11 @@ class JokeApp {
   }
 
   static writeJokes(jokes) {
-    fs.writeFileSync(CONFIG.files.jokes, JSON.stringify(jokes, null, 2));
+    fs.writeFileSync(
+      CONFIG.files.jokes,
+      JSON.stringify(jokes, null, 2),
+      "utf8"
+    );
   }
 
   static showLeaderboard() {
@@ -138,9 +150,13 @@ class JokeApp {
   }
 
   static analyzeJokes(jokes) {
-    const counts = {};
-    jokes.forEach((joke) => (counts[joke] = (counts[joke] || 0) + 1));
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const counts = new Map();
+
+    jokes.forEach((joke) => {
+      counts.set(joke, (counts.get(joke) || 0) + 1);
+    });
+
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   }
 
   static displayLeaderboard(stats) {
